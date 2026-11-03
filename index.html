@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Побег из класса: Мастерская парфюмера</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: #1a120a;
+  color: #f5e6c8;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.screen { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+.screen.active { display: block; }
+h1 { color: #d4a054; font-size: 2rem; margin-bottom: 10px; text-align: center; }
+h2 { color: #d4a054; font-size: 1.3rem; margin-bottom: 15px; }
+.subtitle { text-align: center; color: #b89878; margin-bottom: 25px; font-size: 1rem; }
+.legend { background: #2a1f14; border: 1px solid #d4a05433; border-radius: 12px; padding: 20px; margin: 20px auto; max-width: 600px; }
+.legend-item { display: flex; align-items: center; gap: 12px; margin: 10px 0; font-size: 0.95rem; }
+.legend-icon { width: 36px; height: 36px; flex-shrink: 0; }
+.btn {
+  background: #d4a054;
+  color: #1a120a;
+  border: none;
+  padding: 14px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  display: inline-block;
+  margin: 5px;
+}
+.btn:hover { background: #e0b060; }
+.btn:active { transform: scale(0.97); }
+.btn-secondary { background: #3a2a1a; color: #f5e6c8; border: 1px solid #d4a05455; }
+.btn-secondary:hover { background: #4a3a2a; }
+.btn-center { display: block; margin: 20px auto; }
+.header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #3a2a1a;
+}
+.header-title { font-size: 1.1rem; color: #d4a054; font-weight: 600; }
+.header-subject { font-size: 0.85rem; color: #b89878; }
+.progress-wrap { flex: 1; min-width: 200px; max-width: 400px; margin: 0 15px; }
+.progress-label { font-size: 0.85rem; color: #b89878; margin-bottom: 4px; }
+.progress-bar { height: 10px; background: #3a2a1a; border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #d4a054, #e8c070); width: 0%; transition: width 0.4s; }
+.scene-outer {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 5px;
+}
+.scene-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background: #1a120a;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #3a2a1a;
+}
+.scene-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: default;
+}
+.scene-img.error-img { display: none; }
+.error-msg {
+  display: none;
+  text-align: center;
+  padding: 60px 20px;
+  color: #ff8866;
+  font-size: 1.1rem;
+}
+.error-msg.active { display: block; }
+.marker {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(26, 18, 10, 0.55);
+  border: 2px solid #d4a054;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  transition: border-color 0.3s, background 0.3s;
+  z-index: 10;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 160, 84, 0.5); }
+  50% { box-shadow: 0 0 0 12px rgba(212, 160, 84, 0); }
+}
+.marker:hover { border-color: #e0b060; background: rgba(26, 18, 10, 0.75); }
+.marker svg { width: 24px; height: 24px; stroke: #d4a054; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.marker.solved { border-color: #6abf69; animation: none; cursor: default; }
+.marker.solved svg { stroke: #6abf69; }
+.marker.solved:hover { background: rgba(26, 18, 10, 0.55); }
+.marker.door-marker svg { stroke: #ffaa44; }
+.marker.door-marker.unlocked { border-color: #6abf69; }
+.marker.door-marker.unlocked svg { stroke: #6abf69; }
+.marker-tooltip {
+  position: absolute;
+  bottom: 54px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 18, 10, 0.92);
+  color: #f5e6c8;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border: 1px solid #d4a05455;
+}
+.marker:hover .marker-tooltip, .marker.show-tooltip .marker-tooltip { opacity: 1; }
+.hint-text { text-align: center; color: #b89878; font-size: 0.9rem; margin: 12px 0 8px; }
+.controls-row { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(26, 18, 10, 0.88);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: #2a1f14;
+  border: 1px solid #d4a05455;
+  border-radius: 12px;
+  padding: 25px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h3 { color: #d4a054; margin-bottom: 12px; font-size: 1.2rem; }
+.modal-task { font-size: 1rem; line-height: 1.5; margin-bottom: 18px; color: #f5e6c8; }
+.modal-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.modal-option {
+  background: #3a2a1a;
+  border: 1px solid #4a3a2a;
+  color: #f5e6c8;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-align: left;
+  transition: background 0.2s, border-color 0.2s;
+}
+.modal-option:hover { background: #4a3a2a; border-color: #d4a054; }
+.modal-option.selected { background: #d4a05422; border-color: #d4a054; }
+.modal-input {
+  width: 100%;
+  background: #1a120a;
+  border: 1px solid #4a3a2a;
+  color: #f5e6c8;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 18px;
+  outline: none;
+}
+.modal-input:focus { border-color: #d4a054; }
+.modal-feedback {
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  display: none;
+}
+.modal-feedback.correct { background: #6abf6922; border: 1px solid #6abf69; color: #8fd98e; display: block; }
+.modal-feedback.wrong { background: #ff666622; border: 1px solid #ff6666; color: #ff8866; display: block; }
+.modal-hints { margin-bottom: 15px; }
+.hint-btn {
+  background: none;
+  border: none;
+  color: #d4a054;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+.hint-btn:disabled { color: #6a5a4a; cursor: default; text-decoration: none; }
+.hint-text-content { color: #c8b898; font-size: 0.9rem; margin-top: 6px; display: none; }
+.hint-text-content.visible { display: block; }
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.final-list { list-style: none; margin: 15px 0; }
+.final-list li { padding: 8px 0; border-bottom: 1px solid #3a2a1a; font-size: 0.95rem; }
+.final-list li::before { content: "✓ "; color: #6abf69; }
+.setup-coords {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: rgba(26, 18, 10, 0.95);
+  border: 1px solid #d4a054;
+  color: #d4a054;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  z-index: 200;
+  display: none;
+}
+.setup-coords.active { display: block; }
+@media (max-width: 700px) {
+  .scene-wrapper { width: calc(100vh * 16 / 9); min-width: 100%; }
+  .scene-outer { padding-bottom: 10px; }
+  .marker { width: 42px; height: 42px; }
+  .marker svg { width: 20px; height: 20px; }
+  h1 { font-size: 1.5rem; }
+  .header-bar { flex-direction: column; align-items: flex-start; }
+  .progress-wrap { max-width: 100%; margin: 10px 0 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="setup-coords" id="setupCoords"></div>
+
+<div id="startScreen" class="screen active">
+  <h1>Побег из класса: Мастерская парфюмера</h1>
+  <p class="subtitle">Химия · 10 класс · Органические вещества</p>
+  <div class="legend">
+    <h2>Легенда</h2>
+    <p style="margin-bottom:12px; color:#c8b898; line-height:1.5;">Вы заперты в старинной мастерской парфюмера и фармацевта. Пять рецептов утеряны. Решите химические задания, чтобы восстановить каждый рецепт и открыть аптечную дверь.</p>
+    <div class="legend-item"><svg class="legend-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#d4a054" fill="none" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="#d4a054"/></svg><span>Рецепт не восстановлен — решите задание</span></div>
+    <div class="legend-item"><svg class="legend-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="#6abf69" fill="none" stroke-width="2"/><path d="M8 12l3 3 5-6" stroke="#6abf69" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Рецепт восстановлен</span></div>
+    <div class="legend-item"><svg class="legend-icon" viewBox="0 0 24 24"><rect x="7" y="10" width="10" height="8" rx="1" stroke="#ffaa44" fill="none" stroke-width="2"/><path d="M9 10V7a3 3 0 016 0v3" stroke="#ffaa44" fill="none" stroke-width="2"/></svg><span>Аптечная дверь — откроется после восстановления всех 5 рецептов</span></div>
+  </div>
+  <button class="btn btn-center" onclick="startGame()">Начать игру</button>
+</div>
+
+<div id="gameScreen" class="screen">
+  <div class="header-bar">
+    <div>
+      <div class="header-title">Мастерская парфюмера</div>
+      <div class="header-subject">Химия · 10 класс · Органика</div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-label">Рецепты: <span id="progressText">0/5</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+  </div>
+  <div class="scene-outer" id="sceneOuter">
+    <div class="scene-wrapper" id="sceneWrapper">
+      <img src="room.png" alt="Мастерская парфюмера" class="scene-img" id="sceneImg" onerror="handleImageError()">
+      <div class="error-msg" id="errorMsg">Положите файл room.png в ту же папку, что и этот HTML-файл.</div>
+      <div id="markersContainer"></div>
+    </div>
+  </div>
+  <div class="hint-text" id="sceneHint">Нажмите на светящуюся метку, чтобы решить задание</div>
+  <div class="hint-text" id="scrollHint" style="display:none;">← листай комнату →</div>
+  <div class="controls-row">
+    <button class="btn btn-secondary" onclick="showJournal()">Журнал</button>
+    <button class="btn btn-secondary" onclick="confirmReset()">Начать заново</button>
+  </div>
+</div>
+
+<div id="finalScreen" class="screen">
+  <h1>Побег удался!</h1>
+  <p class="subtitle">Все рецепты восстановлены. Аптечная дверь открыта.</p>
+  <h2>Что повторили:</h2>
+  <ul class="final-list" id="finalList"></ul>
+  <button class="btn btn-center" onclick="confirmReset()">Играть заново</button>
+</div>
+
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <h3 id="taskTitle">Задание</h3>
+    <div class="modal-task" id="taskText"></div>
+    <div class="modal-options" id="taskOptions"></div>
+    <input type="text" inputmode="decimal" class="modal-input" id="taskInput" placeholder="Введите ответ" style="display:none;">
+    <div class="modal-hints">
+      <button class="hint-btn" id="hintBtn1" onclick="showHint(1)">Подсказка 1</button>
+      <div class="hint-text-content" id="hintText1"></div>
+      <button class="hint-btn" id="hintBtn2" onclick="showHint(2)" style="display:none;">Подсказка 2</button>
+      <div class="hint-text-content" id="hintText2"></div>
+    </div>
+    <div class="modal-feedback" id="taskFeedback"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeTask()">Закрыть</button>
+      <button class="btn" id="checkBtn" onclick="checkAnswer()">Проверить</button>
+      <button class="btn" id="nextBtn" onclick="closeTask()" style="display:none;">Дальше</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <h3>Начать заново?</h3>
+    <p style="color:#c8b898; margin-bottom:20px;">Весь прогресс будет сброшен.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeResetModal()">Отмена</button>
+      <button class="btn" onclick="doReset()">Сбросить</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="messageModal">
+  <div class="modal">
+    <h3 id="messageTitle">Сообщение</h3>
+    <p id="messageText" style="color:#c8b898; margin-bottom:20px;"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeMessageModal()">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="journalModal">
+  <div class="modal">
+    <h3>Журнал заданий</h3>
+    <div id="journalContent"></div>
+    <div class="modal-actions" style="margin-top:15px;">
+      <button class="btn" onclick="closeJournal()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TASKS = [
+  {
+    id: 1, name: "Баночка с корнем валерианы", type: "choice",
+    question: "Ученик нашёл вещество, которое в природе встречается в корне валерианы. Какое у него тривиальное название?",
+    options: ["а) Масляная кислота", "б) Валериановая кислота", "в) Капроновая кислота"],
+    correct: 1,
+    hint1: "Вспомните, какие кислоты названы в честь растений или животных.",
+    hint2: "Капроновая пахнет козьим сыром, а масляная — прогорклым маслом.",
+    correctExpl: "Валериановая (пентановая) кислота действительно встречается в корне валерианы и синтезируется микрофлорой кишечника.",
+    wrongExpl: "Нет. Масляная кислота пахнет прогорклым маслом, а капроновая — козьим сыром. В корне валерианы содержится валериановая кислота."
+  },
+  {
+    id: 2, name: "Флакон с «древесным спиртом»", type: "input",
+    question: "В лаборатории стоит флакон с «древесным спиртом». Напишите его систематическое название (одним словом, с маленькой буквы).",
+    correct: "метанол",
+    hint1: "Это простейший одноатомный спирт.",
+    hint2: "В его названии корень «мет-», как у метана.",
+    correctExpl: "Систематическое название древесного спирта — метанол. Он смертельно ядовит.",
+    wrongExpl: "Ошибка. Древесный спирт — это метанол. Засчитывается ответ: метанол (с маленькой буквы, без пробелов по краям)."
+  },
+  {
+    id: 3, name: "Банка с формалином", type: "choice",
+    question: "Для сохранения биологических препаратов в медицине используют формалин. Какой концентрации раствор метаналя он представляет?",
+    options: ["а) 10%", "б) 40%", "в) 96%"],
+    correct: 1,
+    hint1: "Формалин — это не чистое вещество, а раствор.",
+    hint2: "Чистый метаналь — это газ, а в медицине используют именно раствор.",
+    correctExpl: "Формалин — это 40% водный раствор метаналя (формальдегида).",
+    wrongExpl: "Нет. Чистый метаналь — газ. В медицине для сохранения органов используют именно 40% раствор — формалин."
+  },
+  {
+    id: 4, name: "Сосуд со сладкой жидкостью", type: "input",
+    question: "Вещество с систематическим названием «пропантриол-1,2,3» сладкое на вкус, не ядовито и используется в косметике. Как оно называется в быту (тривиальное название, с маленькой буквы)?",
+    correct: "глицерин",
+    hint1: "Это трёхатомный спирт.",
+    hint2: "Его тривиальное название произошло от греческого слова «сладкий».",
+    correctExpl: "Тривиальное название пропантриола-1,2,3 — глицерин.",
+    wrongExpl: "Ошибка. Пропантриол-1,2,3 в быту называют глицерин. Засчитывается ответ: глицерин (с маленькой буквы)."
+  },
+  {
+    id: 5, name: "Склянка с резким запахом", type: "choice",
+    question: "Лаборант открыл склянку с кислотой, которая имеет специфический запах, напоминающий запах козьего молока или сыра. Какое систематическое название у этой кислоты?",
+    options: ["а) Бутановая кислота", "б) Пентановая кислота", "в) Гексановая кислота"],
+    correct: 2,
+    hint1: "Вспомните, какие кислоты имеют «животные» запахи.",
+    hint2: "Бутановая пахнет прогорклым маслом, пентановая — валерианой.",
+    correctExpl: "Капроновая (гексановая) кислота имеет резкий запах козьего молока или сыра.",
+    wrongExpl: "Нет. Бутановая кислота пахнет прогорклым маслом, а пентановая — валерианой. Запах козьего сыра имеет гексановая (капроновая) кислота."
+  }
+];
+
+const MARKERS = [
+  { id: 1, left: 18, top: 50, icon: "jar" },
+  { id: 2, left: 50, top: 55, icon: "flask" },
+  { id: 3, left: 80, top: 55, icon: "specimen" },
+  { id: 4, left: 13, top: 80, icon: "honey" },
+  { id: 5, left: 83, top: 25, icon: "smoke" }
+];
+
+const DOOR_MARKER = { left: 50, top: 35 };
+
+const ICONS = {
+  jar: '<svg viewBox="0 0 24 24"><rect x="6" y="8" width="12" height="12" rx="1"/><path d="M8 8V5h8v3"/><path d="M9 12h6M9 15h6"/></svg>',
+  flask: '<svg viewBox="0 0 24 24"><path d="M9 3h6v4l4 10a2 2 0 01-2 2H7a2 2 0 01-2-2l4-10V3z"/><path d="M9 3h6"/></svg>',
+  specimen: '<svg viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2"/><path d="M9 4V2h6v2"/><path d="M10 10c1 1 3 1 4 0"/></svg>',
+  honey: '<svg viewBox="0 0 24 24"><path d="M6 10h12l-1 10a2 2 0 01-2 2H9a2 2 0 01-2-2L6 10z"/><path d="M8 10V7h8v3"/><path d="M14 14l-2 2-1-1"/></svg>',
+  smoke: '<svg viewBox="0 0 24 24"><path d="M8 20h8"/><path d="M10 20v-6a2 2 0 012-2h0a2 2 0 012 2v6"/><path d="M12 12V8"/><path d="M12 8c-1-2 1-3 0-5"/><path d="M12 8c1-2-1-3 0-5"/></svg>',
+  lock: '<svg viewBox="0 0 24 24"><rect x="7" y="10" width="10" height="8" rx="1"/><path d="M9 10V7a3 3 0 016 0v3"/><circle cx="12" cy="14" r="1" fill="currentColor"/></svg>',
+  lockOpen: '<svg viewBox="0 0 24 24"><rect x="7" y="10" width="10" height="8" rx="1"/><path d="M9 10V7a3 3 0 015.5-1.7"/><circle cx="12" cy="14" r="1" fill="currentColor"/></svg>',
+  check: '<svg viewBox="0 0 24 24"><path d="M8 12l3 3 5-6" stroke-width="2.5"/></svg>'
+};
+
+let state = { solved: {}, currentTask: null, selectedOption: null, hintsUsed: 0, currentScreen: 'startScreen' };
+let isSetupMode = window.location.hash === '#setup';
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('escapeRoomState');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      state.solved = parsed.solved || {};
+      state.currentScreen = parsed.currentScreen || 'startScreen';
+    }
+  } catch(e) { state.solved = {}; state.currentScreen = 'startScreen'; }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem('escapeRoomState', JSON.stringify({
+      solved: state.solved,
+      currentScreen: state.currentScreen
+    }));
+  } catch(e) {}
+}
+
+function switchScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  state.currentScreen = id;
+  saveState();
+}
+
+function startGame() {
+  loadState();
+  switchScreen('gameScreen');
+  renderMarkers();
+  updateProgress();
+  checkScrollHint();
+}
+
+function renderMarkers() {
+  const container = document.getElementById('markersContainer');
+  container.innerHTML = '';
+  MARKERS.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'marker' + (state.solved[m.id] ? ' solved' : '');
+    div.style.left = m.left + '%';
+    div.style.top = m.top + '%';
+    div.innerHTML = '<div class="marker-tooltip">' + m.name + '</div>' +
+      (state.solved[m.id] ? ICONS.check : ICONS[m.icon]);
+    div.onclick = () => openTask(m.id);
+    if ('ontouchstart' in window) div.ontouchstart = (e) => { e.preventDefault(); div.classList.toggle('show-tooltip'); };
+    container.appendChild(div);
+  });
+  const doorDiv = document.createElement('div');
+  const allSolved = MARKERS.every(m => state.solved[m.id]);
+  doorDiv.className = 'marker door-marker' + (allSolved ? ' unlocked' : '');
+  doorDiv.style.left = DOOR_MARKER.left + '%';
+  doorDiv.style.top = DOOR_MARKER.top + '%';
+  doorDiv.innerHTML = '<div class="marker-tooltip">Аптечная дверь</div>' +
+    (allSolved ? ICONS.lockOpen : ICONS.lock);
+  doorDiv.onclick = () => tryOpenDoor();
+  if ('ontouchstart' in window) doorDiv.ontouchstart = (e) => { e.preventDefault(); doorDiv.classList.toggle('show-tooltip'); };
+  container.appendChild(doorDiv);
+}
+
+function updateProgress() {
+  const count = MARKERS.filter(m => state.solved[m.id]).length;
+  document.getElementById('progressText').textContent = count + '/5';
+  document.getElementById('progressFill').style.width = (count * 20) + '%';
+}
+
+function openTask(id) {
+  if (state.solved[id]) return;
+  const task = TASKS.find(t => t.id === id);
+  if (!task) return;
+  state.currentTask = task;
+  state.selectedOption = null;
+  state.hintsUsed = 0;
+  document.getElementById('taskTitle').textContent = task.name;
+  document.getElementById('taskText').textContent = task.question;
+  const optsDiv = document.getElementById('taskOptions');
+  const inputEl = document.getElementById('taskInput');
+  optsDiv.innerHTML = '';
+  inputEl.value = '';
+  document.getElementById('taskFeedback').className = 'modal-feedback';
+  document.getElementById('taskFeedback').textContent = '';
+  document.getElementById('hintText1').classList.remove('visible');
+  document.getElementById('hintText2').classList.remove('visible');
+  document.getElementById('hintBtn1').disabled = false;
+  document.getElementById('hintBtn2').style.display = 'none';
+  document.getElementById('hintBtn2').disabled = false;
+  document.getElementById('checkBtn').style.display = 'inline-block';
+  document.getElementById('nextBtn').style.display = 'none';
+  if (task.type === 'choice') {
+    optsDiv.style.display = 'flex';
+    inputEl.style.display = 'none';
+    task.options.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'modal-option';
+      btn.textContent = opt;
+      btn.onclick = () => selectOption(i, btn);
+      optsDiv.appendChild(btn);
+    });
+  } else {
+    optsDiv.style.display = 'none';
+    inputEl.style.display = 'block';
+    setTimeout(() => inputEl.focus(), 100);
+  }
+  document.getElementById('taskModal').classList.add('active');
+}
+
+function selectOption(idx, btn) {
+  state.selectedOption = idx;
+  document.querySelectorAll('.modal-option').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function showHint(n) {
+  const task = state.currentTask;
+  if (!task) return;
+  if (n === 1) {
+    document.getElementById('hintText1').textContent = task.hint1;
+    document.getElementById('hintText1').classList.add('visible');
+    document.getElementById('hintBtn1').disabled = true;
+    document.getElementById('hintBtn2').style.display = 'inline-block';
+    state.hintsUsed = 1;
+  } else if (n === 2) {
+    document.getElementById('hintText2').textContent = task.hint2;
+    document.getElementById('hintText2').classList.add('visible');
+    document.getElementById('hintBtn2').disabled = true;
+    state.hintsUsed = 2;
+  }
+}
+
+function normalizeAnswer(val) {
+  return val.replace(',', '.').replace(/\s/g, '').trim().toLowerCase();
+}
+
+function checkAnswer() {
+  const task = state.currentTask;
+  if (!task) return;
+  const feedback = document.getElementById('taskFeedback');
+  let isCorrect = false;
+  if (task.type === 'choice') {
+    if (state.selectedOption === null) {
+      feedback.className = 'modal-feedback wrong';
+      feedback.textContent = 'Выберите один из вариантов ответа.';
+      return;
+    }
+    isCorrect = state.selectedOption === task.correct;
+  } else {
+    const val = normalizeAnswer(document.getElementById('taskInput').value);
+    if (val === '') {
+      feedback.className = 'modal-feedback wrong';
+      feedback.textContent = 'Введите ответ.';
+      return;
+    }
+    const numVal = parseFloat(val);
+    const numCorrect = parseFloat(task.correct);
+    if (!isNaN(numVal) && !isNaN(numCorrect)) {
+      isCorrect = numVal === numCorrect;
+    } else {
+      isCorrect = val === normalizeAnswer(task.correct);
+    }
+  }
+  if (isCorrect) {
+    feedback.className = 'modal-feedback correct';
+    feedback.textContent = task.correctExpl;
+    state.solved[task.id] = true;
+    saveState();
+    document.getElementById('checkBtn').style.display = 'none';
+    document.getElementById('nextBtn').style.display = 'inline-block';
+    renderMarkers();
+    updateProgress();
+  } else {
+    feedback.className = 'modal-feedback wrong';
+    feedback.textContent = task.wrongExpl;
+    if (task.type === 'input') {
+      document.getElementById('taskInput').value = '';
+      setTimeout(() => document.getElementById('taskInput').focus(), 50);
+    }
+  }
+}
+
+function closeTask() {
+  document.getElementById('taskModal').classList.remove('active');
+  state.currentTask = null;
+  state.selectedOption = null;
+  document.getElementById('checkBtn').style.display = 'inline-block';
+  document.getElementById('nextBtn').style.display = 'none';
+}
+
+function tryOpenDoor() {
+  const count = MARKERS.filter(m => state.solved[m.id]).length;
+  if (count === 5) {
+    showFinal();
+  } else {
+    showMessage('Дверь заперта', 'Восстановлено рецептов: ' + count + ' из 5. Решите все задания, чтобы открыть аптечную дверь.');
+  }
+}
+
+function showFinal() {
+  const list = document.getElementById('finalList');
+  list.innerHTML = '';
+  TASKS.forEach(t => {
+    const li = document.createElement('li');
+    li.textContent = t.name + ': ' + t.question.substring(0, 60) + '...';
+    list.appendChild(li);
+  });
+  switchScreen('finalScreen');
+}
+
+function confirmReset() {
+  document.getElementById('resetModal').classList.add('active');
+}
+
+function closeResetModal() {
+  document.getElementById('resetModal').classList.remove('active');
+}
+
+function doReset() {
+  state.solved = {};
+  state.currentScreen = 'startScreen';
+  saveState();
+  closeResetModal();
+  switchScreen('startScreen');
+}
+
+function showMessage(title, text) {
+  document.getElementById('messageTitle').textContent = title;
+  document.getElementById('messageText').textContent = text;
+  document.getElementById('messageModal').classList.add('active');
+}
+
+function closeMessageModal() {
+  document.getElementById('messageModal').classList.remove('active');
+}
+
+function showJournal() {
+  const content = document.getElementById('journalContent');
+  content.innerHTML = '';
+  TASKS.forEach(t => {
+    const div = document.createElement('div');
+    div.style.padding = '10px 0';
+    div.style.borderBottom = '1px solid #3a2a1a';
+    const status = state.solved[t.id] ? '<span style="color:#6abf69;">✓ Решено</span>' : '<span style="color:#ffaa44;">○ Не решено</span>';
+    div.innerHTML = '<div style="font-weight:600; color:#d4a054; margin-bottom:4px;">' + t.name + ' ' + status + '</div>' +
+      '<div style="color:#c8b898; font-size:0.9rem;">' + t.question + '</div>';
+    content.appendChild(div);
+  });
+  document.getElementById('journalModal').classList.add('active');
+}
+
+function closeJournal() {
+  document.getElementById('journalModal').classList.remove('active');
+}
+
+function handleImageError() {
+  document.getElementById('sceneImg').classList.add('error-img');
+  document.getElementById('errorMsg').classList.add('active');
+}
+
+function checkScrollHint() {
+  const hint = document.getElementById('scrollHint');
+  const sceneHint = document.getElementById('sceneHint');
+  if (window.innerWidth <= 700) {
+    hint.style.display = 'block';
+    sceneHint.style.display = 'none';
+  } else {
+    hint.style.display = 'none';
+    sceneHint.style.display = 'block';
+  }
+}
+
+window.addEventListener('resize', checkScrollHint);
+
+if (isSetupMode) {
+  document.addEventListener('DOMContentLoaded', () => {
+    const img = document.getElementById('sceneImg');
+    img.style.cursor = 'crosshair';
+    img.addEventListener('click', (e) => {
+      const rect = img.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      const coords = document.getElementById('setupCoords');
+      coords.textContent = 'left: ' + Math.round(x) + '%, top: ' + Math.round(y) + '%';
+      coords.classList.add('active');
+    });
+  });
+}
+
+loadState();
+if (state.currentScreen && state.currentScreen !== 'startScreen') {
+  switchScreen(state.currentScreen);
+  if (state.currentScreen === 'gameScreen') {
+    renderMarkers();
+    updateProgress();
+    checkScrollHint();
+  }
+}
+</script>
+</body>
+</html>
