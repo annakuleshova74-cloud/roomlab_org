@@ -303,7 +303,7 @@ h2 { color: #d4a054; font-size: 1.3rem; margin-bottom: 15px; }
     <h3 id="taskTitle">Задание</h3>
     <div class="modal-task" id="taskText"></div>
     <div class="modal-options" id="taskOptions"></div>
-    <input type="text" inputmode="decimal" class="modal-input" id="taskInput" placeholder="Введите ответ" style="display:none;">
+    <input type="text" class="modal-input" id="taskInput" placeholder="Введите ответ" style="display:none;">
     <div class="modal-hints">
       <button class="hint-btn" id="hintBtn1" onclick="showHint(1)">Подсказка 1</button>
       <div class="hint-text-content" id="hintText1"></div>
@@ -555,7 +555,7 @@ function showHint(n) {
 }
 
 function normalizeAnswer(val) {
-  return val.replace(',', '.').replace(/\s/g, '').trim().toLowerCase();
+  return val.replace(/\s/g, '').trim().toLowerCase();
 }
 
 function checkAnswer() {
@@ -577,13 +577,7 @@ function checkAnswer() {
       feedback.textContent = 'Введите ответ.';
       return;
     }
-    const numVal = parseFloat(val);
-    const numCorrect = parseFloat(task.correct);
-    if (!isNaN(numVal) && !isNaN(numCorrect)) {
-      isCorrect = numVal === numCorrect;
-    } else {
-      isCorrect = val === normalizeAnswer(task.correct);
-    }
+    isCorrect = val === normalizeAnswer(task.correct);
   }
   if (isCorrect) {
     feedback.className = 'modal-feedback correct';
